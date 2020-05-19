@@ -7,18 +7,30 @@ from utils.layers import multi_dense_layers
 
 class GraphGANModel(object):
 
-    def __init__(self, vertexes, edges, nodes, embedding_dim, decoder_units, discriminator_units,
-                 decoder, discriminator, soft_gumbel_softmax=False, hard_gumbel_softmax=False,
+    def __init__(self,
+                 vertexes,             # max atom num?
+                 edges,                # bond num types
+                 nodes,                # atom num types
+                 embedding_dim,        # z space dim
+                 decoder_units,        # tuple, decoder setup?
+                 discriminator_units,  # tuple, discr. setup?
+                 decoder,              # callable fn. in models.__init__
+                 discriminator,        # callable fn. in models.__init__
+                 soft_gumbel_softmax=False,
+                 hard_gumbel_softmax=False,
                  batch_discriminator=True):
-        self.vertexes, self.edges, self.nodes, self.embedding_dim, self.decoder_units, self.discriminator_units, \
-        self.decoder, self.discriminator, self.batch_discriminator = vertexes, edges, nodes, embedding_dim, decoder_units, \
-                                                                     discriminator_units, decoder, discriminator, batch_discriminator
+
+        self.vertexes, self.edges, self.nodes, \
+        self.embedding_dim, self.decoder_units, self.discriminator_units, \
+        self.decoder, self.discriminator, self.batch_discriminator = \
+            vertexes, edges, nodes, embedding_dim, decoder_units, \
+            discriminator_units, decoder, discriminator, batch_discriminator
 
         self.training = tf.placeholder_with_default(False, shape=())
         self.dropout_rate = tf.placeholder_with_default(0., shape=())
         self.soft_gumbel_softmax = tf.placeholder_with_default(soft_gumbel_softmax, shape=())
         self.hard_gumbel_softmax = tf.placeholder_with_default(hard_gumbel_softmax, shape=())
-        self.temperature = tf.placeholder_with_default(1., shape=())
+        self.temperature = tf.placeholder_with_default(1., shape=())   # temperature for softmax
 
         self.edges_labels = tf.placeholder(dtype=tf.int64, shape=(None, vertexes, vertexes))
         self.nodes_labels = tf.placeholder(dtype=tf.int64, shape=(None, vertexes))
@@ -30,49 +42,54 @@ class GraphGANModel(object):
         self.node_tensor = tf.one_hot(self.nodes_labels, depth=nodes, dtype=tf.float32)
 
         with tf.variable_scope('generator'):
-            self.edges_logits, self.nodes_logits = self.decoder(self.embeddings, decoder_units, vertexes, edges, nodes,
-                                                                training=self.training, dropout_rate=self.dropout_rate)
+            self.edges_logits, self.nodes_logits = \
+                self.decoder(self.embeddings, decoder_units, vertexes, edges, nodes,
+                             training=self.training, dropout_rate=self.dropout_rate)
 
         with tf.name_scope('outputs'):
             (self.edges_softmax, self.nodes_softmax), \
             (self.edges_argmax, self.nodes_argmax), \
             (self.edges_gumbel_logits, self.nodes_gumbel_logits), \
             (self.edges_gumbel_softmax, self.nodes_gumbel_softmax), \
-            (self.edges_gumbel_argmax, self.nodes_gumbel_argmax) = postprocess_logits(
-                (self.edges_logits, self.nodes_logits), temperature=self.temperature)
+            (self.edges_gumbel_argmax, self.nodes_gumbel_argmax) = \
+                postprocess_logits((self.edges_logits, self.nodes_logits), temperature=self.temperature)
 
-            self.edges_hat = tf.case({self.soft_gumbel_softmax: lambda: self.edges_gumbel_softmax,
-                                      self.hard_gumbel_softmax: lambda: tf.stop_gradient(
-                                          self.edges_gumbel_argmax - self.edges_gumbel_softmax) + self.edges_gumbel_softmax},
-                                     default=lambda: self.edges_softmax,
-                                     exclusive=True)
+            self.edges_hat = tf.case({
+                self.soft_gumbel_softmax: lambda: self.edges_gumbel_softmax,
+                self.hard_gumbel_softmax: lambda: tf.stop_gradient(
+                    self.edges_gumbel_argmax - self.edges_gumbel_softmax) + self.edges_gumbel_softmax},
+                default=lambda: self.edges_softmax,
+                exclusive=True)
 
-            self.nodes_hat = tf.case({self.soft_gumbel_softmax: lambda: self.nodes_gumbel_softmax,
-                                      self.hard_gumbel_softmax: lambda: tf.stop_gradient(
-                                          self.nodes_gumbel_argmax - self.nodes_gumbel_softmax) + self.nodes_gumbel_softmax},
-                                     default=lambda: self.nodes_softmax,
-                                     exclusive=True)
+            self.nodes_hat = tf.case({
+                self.soft_gumbel_softmax: lambda: self.nodes_gumbel_softmax,
+                self.hard_gumbel_softmax: lambda: tf.stop_gradient(
+                    self.nodes_gumbel_argmax - self.nodes_gumbel_softmax) + self.nodes_gumbel_softmax},
+                default=lambda: self.nodes_softmax,
+                exclusive=True)
 
         with tf.name_scope('D_x_real'):
-            self.logits_real, self.features_real = self.D_x((self.adjacency_tensor, None, self.node_tensor),
-                                                            units=discriminator_units)
+            self.logits_real, self.features_real = self.D_x(
+                (self.adjacency_tensor, None, self.node_tensor), units=discriminator_units)
         with tf.name_scope('D_x_fake'):
-            self.logits_fake, self.features_fake = self.D_x((self.edges_hat, None, self.nodes_hat),
-                                                            units=discriminator_units)
+            self.logits_fake, self.features_fake = self.D_x(
+                (self.edges_hat, None, self.nodes_hat), units=discriminator_units)
 
         with tf.name_scope('V_x_real'):
-            self.value_logits_real = self.V_x((self.adjacency_tensor, None, self.node_tensor),
-                                              units=discriminator_units)
+            self.value_logits_real = self.V_x(
+                (self.adjacency_tensor, None, self.node_tensor), units=discriminator_units)
         with tf.name_scope('V_x_fake'):
-            self.value_logits_fake = self.V_x((self.edges_hat, None, self.nodes_hat), units=discriminator_units)
+            self.value_logits_fake = self.V_x(
+                (self.edges_hat, None, self.nodes_hat), units=discriminator_units)
 
     def D_x(self, inputs, units):
         with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
-            outputs0 = self.discriminator(inputs, units=units[:-1], training=self.training,
-                                          dropout_rate=self.dropout_rate)
+            outputs0 = self.discriminator(
+                inputs, units=units[:-1], training=self.training, dropout_rate=self.dropout_rate)
 
-            outputs1 = multi_dense_layers(outputs0, units=units[-1], activation=tf.nn.tanh, training=self.training,
-                                          dropout_rate=self.dropout_rate)
+            outputs1 = multi_dense_layers(
+                outputs0, units=units[-1], activation=tf.nn.tanh,
+                training=self.training, dropout_rate=self.dropout_rate)
 
             if self.batch_discriminator:
                 outputs_batch = tf.layers.dense(outputs0, units[-2] // 8, activation=tf.tanh)
@@ -88,11 +105,12 @@ class GraphGANModel(object):
 
     def V_x(self, inputs, units):
         with tf.variable_scope('value', reuse=tf.AUTO_REUSE):
-            outputs = self.discriminator(inputs, units=units[:-1], training=self.training,
-                                         dropout_rate=self.dropout_rate)
+            outputs = self.discriminator(
+                inputs, units=units[:-1], training=self.training, dropout_rate=self.dropout_rate)
 
-            outputs = multi_dense_layers(outputs, units=units[-1], activation=tf.nn.tanh, training=self.training,
-                                         dropout_rate=self.dropout_rate)
+            outputs = multi_dense_layers(
+                outputs, units=units[-1], activation=tf.nn.tanh,
+                training=self.training, dropout_rate=self.dropout_rate)
 
             outputs = tf.layers.dense(outputs, units=1, activation=tf.nn.sigmoid)
 
