@@ -10,17 +10,17 @@ from models import encoder_rgcn, decoder_adj, decoder_dot, decoder_rnn
 from optimizers.gan import GraphGANOptimizer
 
 
-DECODER_UNITS = (128, 256, 512)
-DISCRIM_UNITS = ((64, 32), 128, (128,))
+DECODER_UNITS = (128, 256, 512)                   # z = Dense(z, dim=units_k)^{(k)}
+DISCRIM_UNITS = ((64, 32), 128, (128,))           # (GCN units, Readout units, MLP units)
 batch_dim = 32
 LA = 0.05
 dropout = 0
 n_critic = 5
-metric = 'validity,qed'
+metric = 'validity,qed'  # all = 'np,logp,sas,qed,novelty,dc,unique,diversity,validity'
 n_samples = 5000
 z_dim = 32
 epochs = 150
-save_every = None
+save_every = 5
 
 data = SparseMolecularDataset()
 data.load('data/gdb9_9nodes.sparsedataset')
@@ -185,8 +185,8 @@ model = GraphGANModel(data.vertexes,
                       data.bond_num_types,
                       data.atom_num_types,
                       z_dim,
-                      decoder_units=DECODER_UNITS,                    # z = Dense(z, dim=units_k)^{(k)}
-                      discriminator_units=DISCRIM_UNITS,  # (GCN units, Readout units, MLP units)
+                      decoder_units=DECODER_UNITS,
+                      discriminator_units=DISCRIM_UNITS,
                       decoder=decoder_adj,
                       discriminator=encoder_rgcn,
                       soft_gumbel_softmax=False,
