@@ -116,5 +116,5 @@ class GraphGANModel(object):
 
         return graph_readouts
 
-    def sample_z(self, batch_dim):
-        return np.random.normal(0, 1, size=(batch_dim, self.embedding_dim))
+    def sample_z(self, batch_dim, mean=0, std=1):
+        return np.random.normal(mean, std, size=(batch_dim, self.embedding_dim))
