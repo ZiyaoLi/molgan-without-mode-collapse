@@ -3,6 +3,14 @@ from utils.layers import multi_graph_convolution_layers, graph_aggregation_layer
 
 
 def encoder_rgcn(inputs, units, training, dropout_rate=0.):
+    '''
+
+    :param inputs: (adj (A), hidden (H), node (X))
+    :param units: (GCN units, aux units)
+    :param training:
+    :param dropout_rate:
+    :return:
+    '''
     graph_convolution_units, auxiliary_units = units
 
     with tf.variable_scope('graph_convolutions'):
@@ -11,8 +19,8 @@ def encoder_rgcn(inputs, units, training, dropout_rate=0.):
 
     with tf.variable_scope('graph_aggregation'):
         _, hidden_tensor, node_tensor = inputs
-        annotations = tf.concat(
-            (output, hidden_tensor, node_tensor) if hidden_tensor is not None else (output, node_tensor), -1)
+        annotations = tf.concat((output, hidden_tensor, node_tensor) if hidden_tensor is not None else
+                                (output, node_tensor), -1)   # concat input features
 
         output = graph_aggregation_layer(annotations, auxiliary_units, activation=tf.nn.tanh,
                                          dropout_rate=dropout_rate, training=training)

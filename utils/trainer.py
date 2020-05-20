@@ -52,21 +52,20 @@ class Trainer:
 
         if _train_step is None:
             def _train_step(step, steps, epoch, epochs, min_epochs, model, optimizer, batch_dim):
-                return self.session.run(train_fetch_dict(step, steps, epoch, epochs, min_epochs, model, optimizer),
-                                        feed_dict=train_feed_dict(step, steps, epoch, epochs, min_epochs, model,
-                                                                  optimizer, batch_dim))
+                return self.session.run(
+                    train_fetch_dict(step, steps, epoch, epochs, min_epochs, model, optimizer),
+                    feed_dict=train_feed_dict(step, steps, epoch, epochs, min_epochs, model, optimizer, batch_dim))
 
         if _eval_step is None:
             def _eval_step(epoch, epochs, min_epochs, model, optimizer, batch_dim, eval_batch, start_time,
                            last_epoch_start_time, _eval_update):
                 from_start = timedelta(seconds=int((time.time() - start_time)))
                 last_epoch = timedelta(seconds=int((time.time() - last_epoch_start_time)))
-                eta = timedelta(seconds=int((time.time() - start_time) * (epochs - epoch) / epoch)
-                                ) if (time.time() - start_time) > 1 else '-:--:-'
+                eta = timedelta(seconds=int((time.time() - start_time) * (epochs - epoch) / epoch)) \
+                    if (time.time() - start_time) > 1 else '-:--:-'
 
-                self.log(
-                    'Epochs {:10}/{} in {} (last epoch in {}), ETA: {}'.format(epoch, epochs, from_start, last_epoch,
-                                                                               eta))
+                self.log('Epochs {:10}/{} in {} (last epoch in {}), ETA: {}'.format(
+                    epoch, epochs, from_start, last_epoch, eta))
 
                 if eval_batch is not None:
                     pr = ProgressBar(80, eval_batch)

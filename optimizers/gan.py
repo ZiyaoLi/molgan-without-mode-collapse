@@ -40,15 +40,18 @@ class GraphGANOptimizer(object):
         self.grad_penalty = tf.reduce_mean(self.grad_penalty)
 
         with tf.name_scope('train_step'):
+            # step for discriminator
             self.train_step_D = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(
                 loss=self.loss_D + 10 * self.grad_penalty,
                 var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='discriminator'))
 
+            # step for generator
             self.train_step_G = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(
-                loss=tf.cond(tf.greater(self.la, 0), lambda: self.la * self.loss_G, lambda: 0.) + tf.cond(
-                    tf.less(self.la, 1), lambda: (1 - self.la) * alpha * self.loss_RL, lambda: 0.),
+                loss=tf.cond(tf.greater(self.la, 0), lambda: self.la * self.loss_G, lambda: 0.) +
+                     tf.cond(tf.less(self.la, 1), lambda: (1 - self.la) * alpha * self.loss_RL, lambda: 0.),
                 var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator'))
 
+            # step for RL reward network
             self.train_step_V = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(
                 loss=self.loss_V,
                 var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='value'))

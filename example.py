@@ -179,8 +179,8 @@ model = GraphGANModel(data.vertexes,
                       data.bond_num_types,
                       data.atom_num_types,
                       z_dim,
-                      decoder_units=(128, 256, 512),
-                      discriminator_units=((128, 64), 128, (128, 64)),
+                      decoder_units=(128, 256, 512),                    # z = Dense(z, dim=units_k)^{(k)}
+                      discriminator_units=((128, 64), 128, (128, 64)),  # (GCN units, Readout units, MLP units)
                       decoder=decoder_adj,
                       discriminator=encoder_rgcn,
                       soft_gumbel_softmax=False,
@@ -209,6 +209,6 @@ trainer.train(batch_dim=batch_dim,
               test_fetch_dict=test_fetch_dict,
               test_feed_dict=test_feed_dict,
               save_every=save_every,
-              directory='', # here users need to first create and then specify a folder where to save the model
+              directory='save',
               _eval_update=_eval_update,
               _test_update=_test_update)

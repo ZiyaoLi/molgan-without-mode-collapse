@@ -69,6 +69,7 @@ class GraphVAEModel:
 
         with tf.name_scope('V_x_real'):
             self.value_logits_real = self.V_x((self.adjacency_tensor, None, self.node_tensor), units=encoder_units)
+
         with tf.name_scope('V_x_fake'):
             self.value_logits_fake = self.V_x((self.edges_hat, None, self.nodes_hat), units=encoder_units)
 
@@ -76,8 +77,8 @@ class GraphVAEModel:
         with tf.variable_scope('value', reuse=tf.AUTO_REUSE):
             outputs = self.encoder(inputs, units=units[:-1], training=self.training, dropout_rate=0.)
 
-            outputs = multi_dense_layers(outputs, units=units[-1], activation=tf.nn.tanh, training=self.training,
-                                         dropout_rate=0.)
+            outputs = multi_dense_layers(
+                outputs, units=units[-1], activation=tf.nn.tanh, training=self.training, dropout_rate=0.)
 
             outputs = tf.layers.dense(outputs, units=1, activation=tf.nn.sigmoid)
 

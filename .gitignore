@@ -47,6 +47,13 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# Data
+data/*.pkl
+data/*.pkl.gz
+data/*.sparsedataset
+data/*.sdf
+data/*.csv
+
 # Translations
 *.mo
 *.pot
@@ -102,4 +109,3 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-/data/gdb9_9nodes.sparsedataset

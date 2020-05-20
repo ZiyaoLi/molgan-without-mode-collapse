@@ -12,8 +12,8 @@ class GraphGANModel(object):
                  edges,                # bond num types
                  nodes,                # atom num types
                  embedding_dim,        # z space dim
-                 decoder_units,        # tuple, decoder setup?
-                 discriminator_units,  # tuple, discr. setup?
+                 decoder_units,        # tuple, decoder setup (z = Dense(z, dim=units_k)^{(k)})
+                 discriminator_units,  # tuple, discr. setup (GCN units, Readout units, MLP units)
                  decoder,              # callable fn. in models.__init__
                  discriminator,        # callable fn. in models.__init__
                  soft_gumbel_softmax=False,
@@ -84,37 +84,37 @@ class GraphGANModel(object):
 
     def D_x(self, inputs, units):
         with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
-            outputs0 = self.discriminator(
+            graph_readouts = self.discriminator(  # units: (GCN units, readout unit)
                 inputs, units=units[:-1], training=self.training, dropout_rate=self.dropout_rate)
 
-            outputs1 = multi_dense_layers(
-                outputs0, units=units[-1], activation=tf.nn.tanh,
+            mlp_processed = multi_dense_layers(
+                graph_readouts, units=units[-1], activation=tf.nn.tanh,
                 training=self.training, dropout_rate=self.dropout_rate)
 
             if self.batch_discriminator:
-                outputs_batch = tf.layers.dense(outputs0, units[-2] // 8, activation=tf.tanh)
+                outputs_batch = tf.layers.dense(graph_readouts, units[-2] // 8, activation=tf.tanh)
                 outputs_batch = tf.layers.dense(tf.reduce_mean(outputs_batch, 0, keep_dims=True), units[-2] // 8,
                                                 activation=tf.nn.tanh)
-                outputs_batch = tf.tile(outputs_batch, (tf.shape(outputs0)[0], 1))
+                outputs_batch = tf.tile(outputs_batch, (tf.shape(graph_readouts)[0], 1))
 
-                outputs1 = tf.concat((outputs1, outputs_batch), -1)
+                mlp_processed = tf.concat((mlp_processed, outputs_batch), -1)
 
-            outputs = tf.layers.dense(outputs1, units=1)
+            logits = tf.layers.dense(mlp_processed, units=1)
 
-        return outputs, outputs1
+        return logits, mlp_processed
 
-    def V_x(self, inputs, units):
+    def V_x(self, inputs, units):  # output reward estimations
         with tf.variable_scope('value', reuse=tf.AUTO_REUSE):
-            outputs = self.discriminator(
+            graph_readouts = self.discriminator(  # units: (GCN units, readout unit)
                 inputs, units=units[:-1], training=self.training, dropout_rate=self.dropout_rate)
 
-            outputs = multi_dense_layers(
-                outputs, units=units[-1], activation=tf.nn.tanh,
+            graph_readouts = multi_dense_layers(
+                graph_readouts, units=units[-1], activation=tf.nn.tanh,
                 training=self.training, dropout_rate=self.dropout_rate)
 
-            outputs = tf.layers.dense(outputs, units=1, activation=tf.nn.sigmoid)
+            graph_readouts = tf.layers.dense(graph_readouts, units=1, activation=tf.nn.sigmoid)
 
-        return outputs
+        return graph_readouts
 
     def sample_z(self, batch_dim):
         return np.random.normal(0, 1, size=(batch_dim, self.embedding_dim))
