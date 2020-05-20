@@ -142,7 +142,7 @@ class Trainer:
 
                 result = _eval_step(epoch, epochs, min_epochs, self.model, self.optimizer, batch_dim, eval_batch,
                                     start_time, last_epoch_start_time, _eval_update)
-                val_rst.append({k: float(v) for v in result.items()})
+                val_rst.append({k: float(v) for k, v in result.items()})
 
                 if best_fn is not None and (True if best_model_value is None else best_fn(result) > best_model_value):
                     self.save(directory)
