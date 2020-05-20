@@ -10,7 +10,7 @@ from models import encoder_rgcn, decoder_adj, decoder_dot, decoder_rnn
 from optimizers.gan import GraphGANOptimizer
 
 batch_dim = 128
-la = 1
+LA = 0.05
 dropout = 0
 n_critic = 5
 metric = 'validity,sas'
@@ -26,6 +26,7 @@ steps = (len(data) // batch_dim)
 
 
 def train_fetch_dict(i, steps, epoch, epochs, min_epochs, model, optimizer):
+    la = 1 if epoch < epochs / 2 else LA
     a = [optimizer.train_step_G] if i % n_critic == 0 else [optimizer.train_step_D]
     b = [optimizer.train_step_V] if i % n_critic == 0 and la < 1 else []
     return a + b
@@ -34,6 +35,8 @@ def train_fetch_dict(i, steps, epoch, epochs, min_epochs, model, optimizer):
 def train_feed_dict(i, steps, epoch, epochs, min_epochs, model, optimizer, batch_dim):
     mols, _, _, a, x, _, _, _, _ = data.next_train_batch(batch_dim)
     embeddings = model.sample_z(batch_dim)
+
+    la = 1 if epoch < epochs / 2 else LA
 
     if la < 1:
 
