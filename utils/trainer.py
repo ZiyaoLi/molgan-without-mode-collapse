@@ -134,12 +134,15 @@ class Trainer:
         start_time = time.time()
         last_epoch_start_time = time.time()
 
+        val_rst = []
+
         for epoch in range(epochs + 1):
 
-            if not (skip_first_eval and epoch == 0):
+            if not skip_first_eval or epoch > 0:
 
                 result = _eval_step(epoch, epochs, min_epochs, self.model, self.optimizer, batch_dim, eval_batch,
                                     start_time, last_epoch_start_time, _eval_update)
+                val_rst.append({k: float(v) for v in result.items()})
 
                 if best_fn is not None and (True if best_model_value is None else best_fn(result) > best_model_value):
                     self.save(directory)
@@ -164,5 +167,9 @@ class Trainer:
                     pr.update(step + 1)
 
                 self.log(date=False)
+
+        import json
+        with open('{}/train_proc.json'.format(directory), 'w') as fh:
+            json.dump(val_rst, fh, indent=1)
 
         _test_step(self.model, self.optimizer, batch_dim, eval_batch, start_time, _test_update)
