@@ -5,7 +5,7 @@ from utils.trainer import Trainer
 from utils.utils import *
 
 from models.gan import GraphGANModel
-from models import encoder_gat, decoder_adj, decoder_dot, decoder_rnn
+from models import encoder_gat, encoder_flat_gat, decoder_adj
 
 from optimizers.gan import GraphGANOptimizer
 
