@@ -31,6 +31,46 @@ def graph_convolution_layer(inputs, units, training, activation=None, dropout_ra
     return output
 
 
+def graph_aggregation_layer(inputs, units, training, activation=None, dropout_rate=0.):
+    '''
+    Readout fn. defined in GG-NN
+    :param inputs: (b, n, d)
+    :param units: int
+    :param training:
+    :param activation:
+    :param dropout_rate:
+    :return:
+    '''
+    i = tf.layers.dense(inputs, units=units, activation=tf.nn.sigmoid)
+    j = tf.layers.dense(inputs, units=units, activation=tf.nn.tanh)
+    output = tf.reduce_sum(i * j, 1)    # Eq. 6 in MolGAN, Readout fn in GG-NN
+    output = activation(output) if activation is not None else output
+    output = tf.layers.dropout(output, dropout_rate, training=training)
+
+    return output
+
+
+def multi_dense_layers(inputs, units, training, activation=None, dropout_rate=0.):
+    hidden_tensor = inputs
+    if isinstance(units, int):
+        units = [units]
+    for u in units:
+        hidden_tensor = tf.layers.dense(hidden_tensor, units=u, activation=activation)
+        hidden_tensor = tf.layers.dropout(hidden_tensor, dropout_rate, training=training)
+
+    return hidden_tensor
+
+
+def multi_graph_convolution_layers(inputs, units, training, activation=None, dropout_rate=0.):
+    adjacency_tensor, hidden_tensor, node_tensor = inputs
+    for u in units:
+        hidden_tensor = graph_convolution_layer(inputs=(adjacency_tensor, hidden_tensor, node_tensor),
+                                                units=u, activation=activation, dropout_rate=dropout_rate,
+                                                training=training)
+
+    return hidden_tensor
+
+
 def masked_softmax(logits, masks):
     logits -= tf.reduce_max(logits, axis=-1, keep_dims=True)   # (b, nb, n, n)
     energy = tf.exp(logits) * masks
@@ -82,45 +122,6 @@ def gat_layer(inputs, units, n_heads, training, activation=None, dropout_rate=0.
 
     return output
 
-
-def graph_aggregation_layer(inputs, units, training, activation=None, dropout_rate=0.):
-    '''
-    Readout fn. defined in GG-NN
-    :param inputs: (b, n, d)
-    :param units: int
-    :param training:
-    :param activation:
-    :param dropout_rate:
-    :return:
-    '''
-    i = tf.layers.dense(inputs, units=units, activation=tf.nn.sigmoid)
-    j = tf.layers.dense(inputs, units=units, activation=tf.nn.tanh)
-    output = tf.reduce_sum(i * j, 1)    # Eq. 6 in MolGAN, Readout fn in GG-NN
-    output = activation(output) if activation is not None else output
-    output = tf.layers.dropout(output, dropout_rate, training=training)
-
-    return output
-
-
-def multi_dense_layers(inputs, units, training, activation=None, dropout_rate=0.):
-    hidden_tensor = inputs
-    if isinstance(units, int):
-        units = [units]
-    for u in units:
-        hidden_tensor = tf.layers.dense(hidden_tensor, units=u, activation=activation)
-        hidden_tensor = tf.layers.dropout(hidden_tensor, dropout_rate, training=training)
-
-    return hidden_tensor
-
-
-def multi_graph_convolution_layers(inputs, units, training, activation=None, dropout_rate=0.):
-    adjacency_tensor, hidden_tensor, node_tensor = inputs
-    for u in units:
-        hidden_tensor = graph_convolution_layer(inputs=(adjacency_tensor, hidden_tensor, node_tensor),
-                                                units=u, activation=activation, dropout_rate=dropout_rate,
-                                                training=training)
-
-    return hidden_tensor
 
 
 def multi_gat_layers(inputs, units, n_heads, training, activation=None, dropout_rate=0.):
