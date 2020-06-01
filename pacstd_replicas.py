@@ -4,18 +4,18 @@ from utils.sparse_molecular_dataset import SparseMolecularDataset
 from utils.trainer import Trainer
 from utils.utils import *
 
-from models.gan import GraphGANModel
+from models.gan import GraphGANModel, PacGANModel, PacStdGANModel
 from models import encoder_rgcn, decoder_adj, decoder_dot, decoder_rnn
 
 from optimizers.gan import GraphGANOptimizer
 
-
+PREFIX = 'pacstd'
 DECODER_UNITS = (128, 256, 512)                   # z = Dense(z, dim=units_k)^{(k)}
 DISCRIM_UNITS = ((64, 32), 128, (128,))           # (GCN units, Readout units, MLP units)
 batch_dim = 32
 LA = 0.05
 dropout = 0
-n_critic = 5
+n_critic = 2
 metric = 'validity,qed'  # all = 'np,logp,sas,qed,novelty,dc,unique,diversity,validity'
 n_samples = 5000
 z_dim = 32
@@ -180,41 +180,48 @@ def _test_update(model, optimizer, batch_dim, test_batch):
     return m0
 
 
-# model
-model = GraphGANModel(data.vertexes,
-                      data.bond_num_types,
-                      data.atom_num_types,
-                      z_dim,
-                      decoder_units=DECODER_UNITS,
-                      discriminator_units=DISCRIM_UNITS,
-                      decoder=decoder_adj,
-                      discriminator=encoder_rgcn,
-                      soft_gumbel_softmax=False,
-                      hard_gumbel_softmax=False,
-                      batch_discriminator=False)
+for i in range(5):
 
-# optimizer
-optimizer = GraphGANOptimizer(model, learning_rate=1e-3, feature_matching=False)
+    # model
+    model = PacStdGANModel(data.vertexes,
+                           data.bond_num_types,
+                           data.atom_num_types,
+                           z_dim,
+                           decoder_units=DECODER_UNITS,
+                           discriminator_units=DISCRIM_UNITS,
+                           decoder=decoder_adj,
+                           discriminator=encoder_rgcn,
+                           soft_gumbel_softmax=False,
+                           hard_gumbel_softmax=False,
+                           batch_discriminator=False)
 
-# session
-session = tf.Session()
-session.run(tf.global_variables_initializer())
+    # optimizer
+    optimizer = GraphGANOptimizer(model, learning_rate=1e-3, feature_matching=False)
 
-# trainer
-trainer = Trainer(model, optimizer, session)
+    # session
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
 
-print('Parameters: {}'.format(np.sum([np.prod(e.shape) for e in session.run(tf.trainable_variables())])))
+    # trainer
+    trainer = Trainer(model, optimizer, session)
 
-trainer.train(batch_dim=batch_dim,
-              epochs=epochs,
-              steps=steps,
-              train_fetch_dict=train_fetch_dict,
-              train_feed_dict=train_feed_dict,
-              eval_fetch_dict=eval_fetch_dict,
-              eval_feed_dict=eval_feed_dict,
-              test_fetch_dict=test_fetch_dict,
-              test_feed_dict=test_feed_dict,
-              save_every=save_every,
-              directory='save',
-              _eval_update=_eval_update,
-              _test_update=_test_update)
+    print('Parameters: {}'.format(np.sum([np.prod(e.shape) for e in session.run(tf.trainable_variables())])))
+
+    save_dir = PREFIX + '_%02d' % (i + 1)
+    import os
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    trainer.train(batch_dim=batch_dim,
+                  epochs=epochs,
+                  steps=steps,
+                  train_fetch_dict=train_fetch_dict,
+                  train_feed_dict=train_feed_dict,
+                  eval_fetch_dict=eval_fetch_dict,
+                  eval_feed_dict=eval_feed_dict,
+                  test_fetch_dict=test_fetch_dict,
+                  test_feed_dict=test_feed_dict,
+                  save_every=save_every,
+                  directory=save_dir,
+                  _eval_update=_eval_update,
+                  _test_update=_test_update)
