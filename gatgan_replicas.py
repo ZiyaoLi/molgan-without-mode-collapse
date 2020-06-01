@@ -212,6 +212,7 @@ for i in range(5):
     import os
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+    print('Directory %s created.' % save_dir)
 
     trainer.train(batch_dim=batch_dim,
                   epochs=epochs,
