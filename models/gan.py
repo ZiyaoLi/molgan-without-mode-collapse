@@ -118,3 +118,27 @@ class GraphGANModel(object):
 
     def sample_z(self, batch_dim, mean=0, std=1):
         return np.random.normal(mean, std, size=(batch_dim, self.embedding_dim))
+
+
+class PacGANModel(GraphGANModel):
+    def D_x(self, inputs, units):
+        with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
+            graph_readouts = self.discriminator(  # units: (GCN units, readout unit)
+                inputs, units=units[:-1], training=self.training, dropout_rate=self.dropout_rate)
+
+            mlp_processed = multi_dense_layers(
+                graph_readouts, units=units[-1], activation=tf.nn.tanh,
+                training=self.training, dropout_rate=self.dropout_rate)
+
+            if self.batch_discriminator:
+                outputs_batch = tf.layers.dense(graph_readouts, units[-2] // 8, activation=tf.tanh)
+                outputs_batch = tf.layers.dense(tf.reduce_mean(outputs_batch, 0, keep_dims=True), units[-2] // 8,
+                                                activation=tf.nn.tanh)
+                outputs_batch = tf.tile(outputs_batch, (tf.shape(graph_readouts)[0], 1))
+
+                mlp_processed = tf.concat((mlp_processed, outputs_batch), -1)
+
+            pac_features = tf.reduce_max(mlp_processed, axis=0, keepdims=True)
+            logits = tf.layers.dense(pac_features, units=1)
+
+        return logits, mlp_processed
