@@ -165,7 +165,7 @@ class PacStdGANModel(GraphGANModel):
             pac_mean = tf.reduce_mean(mlp_processed, axis=0, keepdims=True)
             pac_std = tf.sqrt(
                 tf.reduce_mean(tf.square(mlp_processed), axis=0, keepdims=True) -
-                tf.square(tf.reduce_mean(mlp_processed), axis=0, keepdims=True)
+                tf.square(tf.reduce_mean(mlp_processed, axis=0, keepdims=True))
             )  # std(x) = sqrt(EX^2 - (EX)^2)
             pac_features = tf.concat([pac_mean, pac_std], axis=-1)
             pac_features = tf.layers.dense(pac_features, units=units[-1][-1])
