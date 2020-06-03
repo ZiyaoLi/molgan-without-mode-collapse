@@ -37,6 +37,7 @@ def Argparser():
     parser.add_argument("-n", "--name", type=str, required=True,
                         help='name of the experiment.')
     parser.add_argument('-m', '--model', type=str, help='model name.')
+    parser.add_argument('-r', '--replicas', type=int, default=1, help='model name.')
     return parser
 
 
@@ -57,31 +58,33 @@ if __name__ == '__main__':
 
     Model, Discr, batch_discr = MODELS[args.model]
 
-    # model
-    model = Model(data.vertexes, data.bond_num_types, data.atom_num_types, z_dim,
-                  decoder_units=DECODER_UNITS,
-                  discriminator_units=DISCRIM_UNITS,
-                  decoder=decoder_adj,
-                  discriminator=Discr,
-                  soft_gumbel_softmax=False,
-                  hard_gumbel_softmax=False,
-                  batch_discriminator=batch_discr)
+    for i in range(args.replicas):
 
-    # optimizer
-    optimizer = GraphGANOptimizer(model, learning_rate=1e-3, feature_matching=False)
+        # model
+        model = Model(data.vertexes, data.bond_num_types, data.atom_num_types, z_dim,
+                      decoder_units=DECODER_UNITS,
+                      discriminator_units=DISCRIM_UNITS,
+                      decoder=decoder_adj,
+                      discriminator=Discr,
+                      soft_gumbel_softmax=False,
+                      hard_gumbel_softmax=False,
+                      batch_discriminator=batch_discr)
 
-    # session
-    session = tf.Session()
-    session.run(tf.global_variables_initializer())
+        # optimizer
+        optimizer = GraphGANOptimizer(model, learning_rate=1e-3, feature_matching=False)
 
-    # trainer
-    trainer = Trainer(model, optimizer, session)
+        # session
+        session = tf.Session()
+        session.run(tf.global_variables_initializer())
 
-    print('Parameters: {}'.format(np.sum([np.prod(e.shape) for e in session.run(tf.trainable_variables())])))
+        # trainer
+        trainer = Trainer(model, optimizer, session)
 
-    trainer.train(batch_dim=batch_dim, epochs=epochs, steps=steps,
-                  train_fetch_dict=train_fetch_dict, train_feed_dict=train_feed_dict,
-                  eval_fetch_dict=eval_fetch_dict, eval_feed_dict=eval_feed_dict,
-                  test_fetch_dict=test_fetch_dict, test_feed_dict=test_feed_dict,
-                  _eval_update=_eval_update, _test_update=_test_update,
-                  save_every=save_every, directory=args.name)
+        print('Parameters: {}'.format(np.sum([np.prod(e.shape) for e in session.run(tf.trainable_variables())])))
+
+        trainer.train(batch_dim=batch_dim, epochs=epochs, steps=steps,
+                      train_fetch_dict=train_fetch_dict, train_feed_dict=train_feed_dict,
+                      eval_fetch_dict=eval_fetch_dict, eval_feed_dict=eval_feed_dict,
+                      test_fetch_dict=test_fetch_dict, test_feed_dict=test_feed_dict,
+                      _eval_update=_eval_update, _test_update=_test_update,
+                      save_every=save_every, directory=args.name + '_%02d' % i if args.replicas > 1 else '')
