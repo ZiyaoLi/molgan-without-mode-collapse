@@ -98,6 +98,8 @@ class GraphGANModel(object):
 
                 batch_features = tf.tile(batch_features, (tf.shape(graph_readouts)[0], 1))
                 final_features = tf.concat((graph_features, batch_features), -1)
+            else:
+                final_features = graph_features
 
             logits = tf.layers.dense(final_features, units=1)
 
