@@ -209,7 +209,7 @@ if __name__ == '__main__':
 
     for i in range(args.replicas):
         
-        save_dir = args.name + '_%02d' % i if args.replicas > 1 else ''
+        save_dir = args.name + ('_%02d' % i if args.replicas > 1 else '')
         import os
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
