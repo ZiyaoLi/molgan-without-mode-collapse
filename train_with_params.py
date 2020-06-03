@@ -208,6 +208,11 @@ if __name__ == '__main__':
     Model, Discr, batch_discr = MODELS[args.model]
 
     for i in range(args.replicas):
+        
+        save_dir = args.name + '_%02d' % i if args.replicas > 1 else ''
+        import os
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
 
         # model
         model = Model(data.vertexes, data.bond_num_types, data.atom_num_types, z_dim,
@@ -236,4 +241,4 @@ if __name__ == '__main__':
                       eval_fetch_dict=eval_fetch_dict, eval_feed_dict=eval_feed_dict,
                       test_fetch_dict=test_fetch_dict, test_feed_dict=test_feed_dict,
                       _eval_update=_eval_update, _test_update=_test_update,
-                      save_every=save_every, directory=args.name + '_%02d' % i if args.replicas > 1 else '')
+                      save_every=save_every, directory=save_dir)

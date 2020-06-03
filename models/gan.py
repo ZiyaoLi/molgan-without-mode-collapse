@@ -95,8 +95,8 @@ class GraphGANModel(object):
                 batch_features = tf.layers.dense(graph_readouts, units[-2] // 8, activation=tf.tanh)
                 batch_features = tf.layers.dense(tf.reduce_mean(batch_features, 0, keep_dims=True), units[-2] // 8,
                                                  activation=tf.nn.tanh)
-                batch_features = tf.tile(batch_features, (tf.shape(graph_readouts)[0], 1))
 
+                batch_features = tf.tile(batch_features, (tf.shape(graph_readouts)[0], 1))
                 final_features = tf.concat((graph_features, batch_features), -1)
 
             logits = tf.layers.dense(final_features, units=1)
@@ -175,7 +175,8 @@ class PacStatsGANModel(GraphGANModel):
 
             batch_features = batch_dev
             batch_features = tf.layers.dense(batch_features, units=units[-2] // 8)
-            final_features = tf.concat((graph_features, tf.tile(batch_features, tf.shape(graph_readouts)[0], -1)), -1)
+            batch_features = tf.tile(batch_features, (tf.shape(graph_readouts)[0], 1))
+            final_features = tf.concat((graph_features, batch_features), axis=-1)
 
             logits = tf.layers.dense(final_features, units=1)
 
@@ -199,7 +200,8 @@ class PacXStatsGANModel(GraphGANModel):
             batch_features = tf.concat((flatten(batch_adj_dev), flatten(batch_node_dev)), -1)
             batch_features = tf.layers.dense(batch_features, units=units[-2] // 8)
 
-            final_features = tf.concat((graph_features, tf.tile(batch_features, tf.shape(graph_readouts)[0], -1)), -1)
+            batch_features = tf.tile(batch_features, (tf.shape(graph_readouts)[0], 1))
+            final_features = tf.concat((graph_features, batch_features), axis=-1)
 
             logits = tf.layers.dense(final_features, units=1)
 
