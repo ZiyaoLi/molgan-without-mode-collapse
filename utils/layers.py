@@ -31,7 +31,7 @@ def graph_convolution_layer(inputs, units, training, activation=None, dropout_ra
     return output
 
 
-def graph_aggregation_layer(inputs, units, training, activation=None, dropout_rate=0.):
+def graph_readout_layer(inputs, units, training, activation=None, dropout_rate=0.):
     '''
     Readout fn. defined in GG-NN
     :param inputs: (b, n, d)

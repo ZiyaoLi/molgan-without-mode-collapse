@@ -172,4 +172,4 @@ class Trainer:
         with open('{}/train_proc.json'.format(directory), 'w') as fh:
             json.dump(val_rst, fh, indent=1)
 
-        _test_step(self.model, self.optimizer, batch_dim, eval_batch, start_time, _test_update)
+        # _test_step(self.model, self.optimizer, batch_dim, eval_batch, start_time, _test_update)
