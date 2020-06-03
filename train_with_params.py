@@ -179,7 +179,6 @@ def _test_update(model, optimizer, batch_dim, test_batch):
     return m0
 
 
-
 def Argparser():
     from argparse import ArgumentParser
     parser = ArgumentParser()

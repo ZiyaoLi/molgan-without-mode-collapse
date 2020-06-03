@@ -145,9 +145,9 @@ def reduce_mae(inputs, axis=0):
 
 
 def reduce_std(inputs, axis=0):
-    return tf.sqrt(tf.reduce_mean(
+    return tf.sqrt(tf.abs(tf.reduce_mean(
         tf.square(inputs - tf.reduce_mean(inputs, axis=axis, keepdims=True)),
-        axis=axis, keepdims=True))
+        axis=axis, keepdims=True)))
 
 
 def reduce_dev(inputs, axis=0, lam1=0.6):
@@ -194,7 +194,7 @@ class PacXStatsGANModel(GraphGANModel):
                 training=self.training, dropout_rate=self.dropout_rate)
 
             adj_tensor, _, node_tensor = inputs
-            flat_adj_tensor = tf.squeeze(tf.layers.dense(adj_tensor, 1))
+            flat_adj_tensor = tf.squeeze(tf.layers.dense(adj_tensor, 1), axis=-1)
             batch_adj_dev = reduce_dev(flat_adj_tensor, axis=0, lam1=0.6)
             batch_node_dev = reduce_dev(node_tensor, axis=0, lam1=0.6)
             batch_features = tf.concat((flatten(batch_adj_dev), flatten(batch_node_dev)), -1)
