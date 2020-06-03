@@ -41,20 +41,27 @@ class GraphGANOptimizer(object):
 
         with tf.name_scope('train_step'):
             # step for discriminator
-            self.train_step_D = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(
-                loss=self.loss_D + 10 * self.grad_penalty,
-                var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='discriminator'))
+            self.train_step_D_opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
+            gvs = self.train_step_D_opt.compute_gradients(loss=self.loss_D + 10 * self.grad_penalty,
+                var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='discriminator'))  # 计算出梯度和变量值
+            capped_gvs = [(tf.clip_by_value(grad, -5, 5), var) for grad, var in gvs]  # 梯度裁剪
+            self.train_step_D = self.train_step_D_opt.apply_gradients(capped_gvs)
 
             # step for generator
-            self.train_step_G = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(
+            self.train_step_G_opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
+            gvs = self.train_step_G_opt.compute_gradients(
                 loss=tf.cond(tf.greater(self.la, 0), lambda: self.la * self.loss_G, lambda: 0.) +
                      tf.cond(tf.less(self.la, 1), lambda: (1 - self.la) * alpha * self.loss_RL, lambda: 0.),
                 var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator'))
+            capped_gvs = [(tf.clip_by_value(grad, -5, 5), var) for grad, var in gvs]  # 梯度裁剪
+            self.train_step_G = self.train_step_G_opt.apply_gradients(capped_gvs)
 
             # step for RL reward network
-            self.train_step_V = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(
-                loss=self.loss_V,
+            self.train_step_V_opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
+            gvs = self.train_step_V_opt.compute_gradients(loss=self.loss_V,
                 var_list=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='value'))
+            capped_gvs = [(tf.clip_by_value(grad, -5, 5), var) for grad, var in gvs]
+            self.train_step_V = self.train_step_V_opt.apply_gradients(capped_gvs)
 
 #
 # class PacGANOptimizer(object):
