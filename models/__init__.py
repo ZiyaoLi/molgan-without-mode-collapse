@@ -1,5 +1,5 @@
 import tensorflow as tf
-from utils.layers import multi_graph_convolution_layers, graph_aggregation_layer, multi_dense_layers
+from utils.layers import multi_graph_convolution_layers, graph_readout_layer, multi_dense_layers
 from utils.layers import multi_gat_layers, multi_flat_gat_layers
 
 
@@ -22,8 +22,8 @@ def encoder_rgcn(inputs, units, training, dropout_rate=0.):
         annotations = tf.concat((output, hidden_tensor, node_tensor) if hidden_tensor is not None else
                                 (output, node_tensor), -1)   # concat input features
 
-        output = graph_aggregation_layer(annotations, auxiliary_units, activation=tf.nn.tanh,
-                                         dropout_rate=dropout_rate, training=training)
+        output = graph_readout_layer(annotations, auxiliary_units, activation=tf.nn.tanh,
+                                     dropout_rate=dropout_rate, training=training)
 
     return output
 
@@ -40,8 +40,8 @@ def encoder_gat(inputs, units, training, dropout_rate=0., n_heads=3):
         annotations = tf.concat((output, hidden_tensor, node_tensor) if hidden_tensor is not None else
                                 (output, node_tensor), -1)   # concat input features
 
-        output = graph_aggregation_layer(annotations, auxiliary_units, activation=tf.nn.tanh,
-                                         dropout_rate=dropout_rate, training=training)
+        output = graph_readout_layer(annotations, auxiliary_units, activation=tf.nn.tanh,
+                                     dropout_rate=dropout_rate, training=training)
 
     return output
 
@@ -58,8 +58,8 @@ def encoder_flat_gat(inputs, units, training, dropout_rate=0., n_heads=3):
         annotations = tf.concat((output, hidden_tensor, node_tensor) if hidden_tensor is not None else
                                 (output, node_tensor), -1)   # concat input features
 
-        output = graph_aggregation_layer(annotations, auxiliary_units, activation=tf.nn.tanh,
-                                         dropout_rate=dropout_rate, training=training)
+        output = graph_readout_layer(annotations, auxiliary_units, activation=tf.nn.tanh,
+                                     dropout_rate=dropout_rate, training=training)
 
     return output
 
