@@ -160,7 +160,7 @@ def flatten(inputs):
     return tf.reshape(inputs, shape=(tf.shape(inputs)[0], -1))
 
 
-class PacStatsGANModel(GraphGANModel):
+class PacElas1Model(GraphGANModel):
     def D_x(self, inputs, units):
         with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
             graph_readouts = self.discriminator(  # units: (GCN units, readout unit)
@@ -185,6 +185,79 @@ class PacStatsGANModel(GraphGANModel):
         return logits, graph_readouts
 
 
+class PacElas2Model(GraphGANModel):
+    def D_x(self, inputs, units):
+        with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
+            graph_readouts = self.discriminator(  # units: (GCN units, readout unit)
+                inputs, units=units[:-1], training=self.training, dropout_rate=self.dropout_rate)
+
+            graph_features = multi_dense_layers(
+                graph_readouts, units=units[-1], activation=tf.nn.tanh,
+                training=self.training, dropout_rate=self.dropout_rate)
+
+            batch_dev = reduce_dev(inputs=graph_readouts, axis=0, lam1=0.6)
+
+            # batch_mean = tf.reduce_mean(graph_readouts, axis=0, keepdims=True)
+            # batch_features = tf.concat([batch_mean, batch_dev], axis=-1)
+
+            batch_features = batch_dev
+            batch_features = tf.layers.dense(batch_features, units=units[-2] // 8)
+            batch_features = tf.layers.dense(batch_features, units=units[-2] // 8)
+            batch_features = tf.tile(batch_features, (tf.shape(graph_readouts)[0], 1))
+            final_features = tf.concat((graph_features, batch_features), axis=-1)
+
+            logits = tf.layers.dense(final_features, units=1)
+
+        return logits, graph_features
+
+
+class PacMeanElas2Model(GraphGANModel):
+    def D_x(self, inputs, units):
+        with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
+            graph_readouts = self.discriminator(  # units: (GCN units, readout unit)
+                inputs, units=units[:-1], training=self.training, dropout_rate=self.dropout_rate)
+
+            graph_features = multi_dense_layers(
+                graph_readouts, units=units[-1], activation=tf.nn.tanh,
+                training=self.training, dropout_rate=self.dropout_rate)
+
+            batch_dev = reduce_dev(inputs=graph_readouts, axis=0, lam1=0.6)
+            batch_mean = tf.reduce_mean(graph_readouts, axis=0, keepdims=True)
+            batch_features = tf.concat([batch_mean, batch_dev], axis=-1)
+            batch_features = tf.layers.dense(batch_features, units=units[-2] // 8, activation=tf.nn.relu)
+            batch_features = tf.layers.dense(batch_features, units=units[-2] // 8, activation=tf.nn.relu)
+
+            batch_features = tf.tile(batch_features, (tf.shape(graph_readouts)[0], 1))
+            final_features = tf.concat((graph_features, batch_features), axis=-1)
+
+            logits = tf.layers.dense(final_features, units=1)
+
+        return logits, graph_features
+
+
+class PacStatsMergeModel(GraphGANModel):
+    def D_x(self, inputs, units):
+        with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
+            graph_readouts = self.discriminator(  # units: (GCN units, readout unit)
+                inputs, units=units[:-1], training=self.training, dropout_rate=self.dropout_rate)
+
+            batch_dev = reduce_dev(inputs=graph_readouts, axis=0, lam1=0.6)
+            batch_mean = tf.reduce_mean(graph_readouts, axis=0, keepdims=True)
+            batch_features = tf.concat([batch_mean, batch_dev], axis=-1)
+            batch_features = tf.layers.dense(batch_features, units=units[-2] // 8, activation=tf.nn.relu)
+
+            batch_features = tf.tile(batch_features, (tf.shape(graph_readouts)[0], 1))
+            final_features = tf.concat((graph_readouts, batch_features), axis=-1)
+
+            final_features = multi_dense_layers(
+                final_features, units=units[-1], activation=tf.nn.tanh,
+                training=self.training, dropout_rate=self.dropout_rate)
+
+            logits = tf.layers.dense(final_features, units=1)
+
+        return logits, graph_readouts
+
+
 class PacXStatsGANModel(GraphGANModel):
     def D_x(self, inputs, units):
         with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE):
@@ -200,7 +273,7 @@ class PacXStatsGANModel(GraphGANModel):
             batch_adj_dev = reduce_dev(flat_adj_tensor, axis=0, lam1=0.6)
             batch_node_dev = reduce_dev(node_tensor, axis=0, lam1=0.6)
             batch_features = tf.concat((flatten(batch_adj_dev), flatten(batch_node_dev)), -1)
-            batch_features = tf.layers.dense(batch_features, units=units[-2] // 8)
+            batch_features = tf.layers.dense(batch_features, units=units[-2] // 8, activation=tf.nn.relu)
 
             batch_features = tf.tile(batch_features, (tf.shape(graph_readouts)[0], 1))
             final_features = tf.concat((graph_features, batch_features), axis=-1)
