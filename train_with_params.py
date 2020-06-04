@@ -11,7 +11,7 @@ from optimizers.gan import GraphGANOptimizer
 
 DECODER_UNITS = (128, 256, 512)                   # z = Dense(z, dim=units_k)^{(k)}
 DISCRIM_UNITS = ((64, 32), 128, (128,))           # (GCN units, Readout units, MLP units)
-batch_dim = 32
+batch_dim = 24
 LA = 0.05
 dropout = 0
 n_critic = 5
@@ -30,7 +30,7 @@ steps = (len(data) // batch_dim)
 def train_fetch_dict(i, steps, epoch, epochs, min_epochs, model, optimizer):
     la = 1 if epoch < epochs / 2 else LA
     a = [optimizer.train_step_G] if i % n_critic == 0 else [optimizer.train_step_D]
-    b = [optimizer.train_step_V] if i % n_critic == 0 and la < 1 else []
+    b = [optimizer.train_step_V] if i % n_critic == 0 and LA < 1 and la == 1 else []
     return a + b
 
 
@@ -40,7 +40,7 @@ def train_feed_dict(i, steps, epoch, epochs, min_epochs, model, optimizer, batch
 
     la = 1 if epoch < epochs / 2 else LA
 
-    if la < 1:
+    if LA < 1:  # RL is calculated anyway
 
         if i % n_critic == 0:
             rewardR = reward(mols)
@@ -96,6 +96,8 @@ def eval_feed_dict(i, epochs, min_epochs, model, optimizer, batch_dim):
     n, e = np.argmax(n, axis=-1), np.argmax(e, axis=-1)
     mols = [data.matrices2mol(n_, e_, strict=True) for n_, e_ in zip(n, e)]
 
+    regist_mols(mols, i)
+
     rewardF = reward(mols)
 
     feed_dict = {model.edges_labels: a,
@@ -133,6 +135,37 @@ def test_feed_dict(model, optimizer, batch_dim):
                  model.rewardF: rewardF,
                  model.training: False}
     return feed_dict
+
+
+def regist_mols(mols, epoch):
+    smiles = list(map(lambda x: Chem.MolToSmiles(x) if MolecularMetrics.valid_lambda(x) else '', mols))
+    valid_unique_smiles = list(set([s for s in smiles if len(s) and '*' not in s and '.' not in s]))
+    np.random.shuffle(smiles)
+    np.random.shuffle(valid_unique_smiles)
+
+    smiles = smiles[:30]
+    valid_unique_smiles = valid_unique_smiles[:30]
+
+    draw_mols = list(map(lambda x: Chem.MolFromSmiles(x) if len(x) else Chem.MolFromSmiles('C'), smiles))
+    draw_vu_mols = list(map(lambda x: Chem.MolFromSmiles(x), valid_unique_smiles))
+
+    if len(draw_mols):
+        from rdkit.Chem import Draw
+        img = Draw.MolsToGridImage(draw_mols, molsPerRow=5, subImgSize=(300, 300))
+        img.save(save_dir + "/samples_%03d.png" % epoch)
+    if len(draw_vu_mols):
+        from rdkit.Chem import Draw
+        img = Draw.MolsToGridImage(draw_vu_mols, molsPerRow=5, subImgSize=(300, 300))
+        img.save(save_dir + "/val_unique_%03d.png" % epoch)
+
+    with open(save_dir + '/sample.smiles', 'a') as fh:
+        fh.write('Epoch %03d:\n' % epoch)
+        fh.write('\n'.join(smiles))
+        fh.write('#\n')
+    with open(save_dir + '/val_unique.smiles', 'a') as fh:
+        fh.write('Epoch %03d:\n' % epoch)
+        fh.write('\n'.join(valid_unique_smiles))
+        fh.write('#\n')
 
 
 def reward(mols):
@@ -189,14 +222,16 @@ def Argparser():
     return parser
 
 
-MODELS = {  # Model, Discr, use_batch_discr
-    'molgan': (GraphGANModel, encoder_rgcn, False),
-    'pacgan': (PacGANModel, encoder_rgcn, False),
-    'pacstats': (PacStatsGANModel, encoder_rgcn, False),
-    'pacxstats': (PacXStatsGANModel, encoder_rgcn, False),
-    'molgan+batch': (GraphGANModel, encoder_rgcn, True),
-    'gat': (GraphGANModel, encoder_gat, False),
-    'flat_gat': (GraphGANModel, encoder_flat_gat, False)
+MODELS = {  # Model, Discr, use_batch_discr, n_critics
+    'molgan': (GraphGANModel, encoder_rgcn, False, 5),
+    'molgan+batch': (GraphGANModel, encoder_rgcn, True, 3),
+    'pmax': (PacGANModel, encoder_rgcn, False, 3),
+    'pe1': (PacElas1Model, encoder_rgcn, False, 5),
+    'pe2': (PacElas2Model, encoder_rgcn, False, 5),
+    'pem': (PacMeanElas2Model, encoder_rgcn, False, 3),
+    'pmerge': (PacStatsMergeModel, encoder_rgcn, False, 3),
+    # 'gat': (GraphGANModel, encoder_gat, False),
+    # 'flat_gat': (GraphGANModel, encoder_flat_gat, False),
 }
 
 
@@ -227,7 +262,7 @@ if __name__ == '__main__':
         optimizer = GraphGANOptimizer(model, learning_rate=1e-3, feature_matching=False)
 
         # session
-        session = tf.Session()
+        session = tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=False))
         session.run(tf.global_variables_initializer())
 
         # trainer
@@ -241,3 +276,4 @@ if __name__ == '__main__':
                       test_fetch_dict=test_fetch_dict, test_feed_dict=test_feed_dict,
                       _eval_update=_eval_update, _test_update=_test_update,
                       save_every=save_every, directory=save_dir)
+
