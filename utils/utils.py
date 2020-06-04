@@ -93,3 +93,32 @@ def all_scores(mols, data, norm=False, reconstruction=False):
           'novel score': MolecularMetrics.novel_total_score(mols, data) * 100}
 
     return m0, m1
+
+
+
+def reward(mols, metric, data):
+    rr = 1.
+    for m in ('logp,sas,qed,unique' if metric == 'all' else metric).split(','):
+
+        if m == 'np':
+            rr *= MolecularMetrics.natural_product_scores(mols, norm=True)
+        elif m == 'logp':
+            rr *= MolecularMetrics.water_octanol_partition_coefficient_scores(mols, norm=True)
+        elif m == 'sas':
+            rr *= MolecularMetrics.synthetic_accessibility_score_scores(mols, norm=True)
+        elif m == 'qed':
+            rr *= MolecularMetrics.quantitative_estimation_druglikeness_scores(mols, norm=True)
+        elif m == 'novelty':
+            rr *= MolecularMetrics.novel_scores(mols, data)
+        elif m == 'dc':
+            rr *= MolecularMetrics.drugcandidate_scores(mols, data)
+        elif m == 'unique':
+            rr *= MolecularMetrics.unique_scores(mols)
+        elif m == 'diversity':
+            rr *= MolecularMetrics.diversity_scores(mols, data)
+        elif m == 'validity':
+            rr *= MolecularMetrics.valid_scores(mols)
+        else:
+            raise RuntimeError('{} is not defined as a metric'.format(m))
+
+    return rr.reshape(-1, 1)
