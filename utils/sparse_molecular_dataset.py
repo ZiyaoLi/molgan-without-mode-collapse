@@ -3,25 +3,30 @@ import numpy as np
 
 from rdkit import Chem
 
-if __name__ == '__main__':
-    from progress_bar import ProgressBar
-else:
-    from utils.progress_bar import ProgressBar
+# if __name__ == '__main__':
+#     from progress_bar import ProgressBar
+#     from utils import reward
+# else:
+from utils.progress_bar import ProgressBar
+from utils.utils import reward
 
 from datetime import datetime
 
 
 class SparseMolecularDataset():
 
-    def load(self, filename, subset=1):
+    def load(self, filename, proportion=1):
 
         with open(filename, 'rb') as f:
             self.__dict__.update(pickle.load(f))
 
-        self.train_idx = np.random.choice(self.train_idx, int(len(self.train_idx) * subset), replace=False)
-        self.validation_idx = np.random.choice(self.validation_idx, int(len(self.validation_idx) * subset),
-                                               replace=False)
-        self.test_idx = np.random.choice(self.test_idx, int(len(self.test_idx) * subset), replace=False)
+        if proportion < 1:
+            self.train_idx = np.random.choice(
+                self.train_idx, int(len(self.train_idx) * proportion), replace=False)
+            self.validation_idx = np.random.choice(
+                self.validation_idx, int(len(self.validation_idx) * proportion), replace=False)
+            self.test_idx = np.random.choice(
+                self.test_idx, int(len(self.test_idx) * proportion), replace=False)
 
         self.train_count = len(self.train_idx)
         self.validation_count = len(self.validation_idx)
@@ -87,7 +92,7 @@ class SparseMolecularDataset():
 
         # a (N, 9, 9) matrix where N is the length of the dataset and each  9x9 matrix contains the 
         # eigenvectors of the correspondent Laplacian matrix
-        self.data_Lv = np.stack(self.data_Lv) 
+        self.data_Lv = np.stack(self.data_Lv)
 
         self.vertexes = self.data_F.shape[-2]
         self.features = self.data_F.shape[-1]
@@ -251,29 +256,29 @@ class SparseMolecularDataset():
 
         return mol
 
-    def _generate_train_validation_test(self, validation, test):
+    def _generate_train_validation_test(self, n_valid, n_test):
 
         self.log('Creating train, validation and test sets..')
 
-        validation = int(validation * len(self))
-        test = int(test * len(self))
-        train = len(self) - validation - test
+        n_valid = int(n_valid * len(self))
+        n_test = int(n_test * len(self))
+        n_train = len(self) - n_valid - n_test
 
         self.all_idx = np.random.permutation(len(self))
-        self.train_idx = self.all_idx[0:train]
-        self.validation_idx = self.all_idx[train:train + validation]
-        self.test_idx = self.all_idx[train + validation:]
+        self.train_idx = self.all_idx[:n_train]
+        self.validation_idx = self.all_idx[n_train: n_train + n_valid]
+        self.test_idx = self.all_idx[n_train + n_valid:]
 
         self.train_counter = 0
         self.validation_counter = 0
         self.test_counter = 0
 
-        self.train_count = train
-        self.validation_count = validation
-        self.test_count = test
+        self.train_count = n_train
+        self.validation_count = n_valid
+        self.test_count = n_test
 
         self.log('Created train ({} items), validation ({} items) and test ({} items) sets!'.format(
-            train, validation, test))
+            n_train, n_valid, n_test))
 
     def _next_batch(self, counter, count, idx, batch_size):
         if batch_size is not None:
@@ -296,21 +301,18 @@ class SparseMolecularDataset():
         out = self._next_batch(counter=self.train_counter, count=self.train_count,
                                idx=self.train_idx, batch_size=batch_size)
         self.train_counter = out[0]
-
         return out[1:]
 
     def next_validation_batch(self, batch_size=None):
         out = self._next_batch(counter=self.validation_counter, count=self.validation_count,
                                idx=self.validation_idx, batch_size=batch_size)
         self.validation_counter = out[0]
-
         return out[1:]
 
     def next_test_batch(self, batch_size=None):
         out = self._next_batch(counter=self.test_counter, count=self.test_count,
                                idx=self.test_idx, batch_size=batch_size)
         self.test_counter = out[0]
-
         return out[1:]
 
     @staticmethod
@@ -320,12 +322,108 @@ class SparseMolecularDataset():
     def __len__(self):
         return self.__len
 
+    def plot_samples(self, filename, n_samples, mols_per_row=5, sub_img_size=(300, 300)):
+        idx = np.random.choice(self.train_idx, n_samples, False)
+        mols = self.data[idx]
+        from rdkit.Chem import Draw
+        img = Draw.MolsToGridImage(mols, molsPerRow=mols_per_row, subImgSize=sub_img_size)
+        img.save(filename)
 
-if __name__ == '__main__':
-    data = SparseMolecularDataset()
-    data.generate('data/gdb9.sdf', filters=lambda x: x.GetNumAtoms() <= 9)  ## QM9 filter
-    data.save('data/gdb9_9nodes.sparsedataset')
+    def write_sample_smiles(self, filename, n_samples):
+        idx = np.random.choice(self.train_idx, n_samples, False)
+        smiles = self.smiles[idx]
+        with open(filename, 'a') as fh:
+            fh.write('\n'.join(smiles))
+            fh.write('\n')
 
-    # data = SparseMolecularDataset()
-    # data.generate('data/qm9_5k.smi', validation=0.00021, test=0.00021)  # , filters=lambda x: x.GetNumAtoms() <= 9)
-    # data.save('data/qm9_5k.sparsedataset')
+
+class SparseMolecularDatasetWithRewards(SparseMolecularDataset):
+    def load(self, filename, metric='validity,qed', conditional_rate=0.3, proportion=1):
+        super(SparseMolecularDatasetWithRewards, self).load(filename, proportion)
+
+        if metric != self.metric:  # a new metric required.
+            self.metric = metric
+            self._genReward(metric)
+            self._generate_conditional_train_validation_test(conditional_rate)
+
+        if proportion < 1:
+            self.cond_train_idx = np.random.choice(
+                self.cond_train_idx, int(len(self.cond_train_idx) * proportion), replace=False)
+            self.cond_validation_idx = np.random.choice(
+                self.cond_validation_idx, int(len(self.cond_validation_idx) * proportion), replace=False)
+            self.cond_test_idx = np.random.choice(
+                self.cond_test_idx, int(len(self.cond_test_idx) * proportion), replace=False)
+
+        self.cond_train_count = len(self.cond_train_idx)
+        self.cond_validation_count = len(self.cond_validation_idx)
+        self.cond_test_count = len(self.cond_test_idx)
+
+        self.cond_len = self.train_count + self.validation_count + self.test_count
+
+    def generate(self, filename, metric='validity,qed', conditional_rate=0.3,
+                 add_h=False, filters=lambda x: True, size=None, validation=0.1, test=0.1):
+        super(SparseMolecularDatasetWithRewards, self).generate(filename, add_h, filters, size, validation, test)
+
+        self.metric = metric
+        self._genReward(metric)
+
+        self._generate_conditional_train_validation_test(conditional_rate)
+
+    def _genReward(self, metric, batch_size=15):
+        self.log('Calculating molecule rewards..')
+
+        pr = ProgressBar(60, len(self.data))
+
+        i = 0
+        self.data_rwd = []
+        while i < len(self.data):
+            mols = self.data[i: i + batch_size]
+            rwds = reward(mols, metric, self).reshape(-1)
+            self.data_rwd.append(rwds)
+            i += batch_size
+            pr.update(min(i, len(self.data)))
+        self.data_rwd = np.concatenate(self.data_rwd, -1)
+
+    def _generate_conditional_train_validation_test(self, conditional_rate):
+        train_rewards = self.data_rwd[self.train_idx]
+        train_order = np.argsort(train_rewards)  # increasing
+        self.cond_train_idx = self.train_idx[
+            train_order[int((1 - conditional_rate) * len(self.train_idx)):]]
+
+        validation_rewards = self.data_rwd[self.validation_idx]
+        validation_order = np.argsort(validation_rewards)  # increasing
+        self.cond_validation_idx = self.validation_idx[
+            validation_order[int((1 - conditional_rate) * len(self.validation_idx)):]]
+
+        test_rewards = self.data_rwd[self.test_idx]
+        test_order = np.argsort(test_rewards)  # increasing
+        self.cond_test_idx = self.test_idx[
+            test_order[int((1 - conditional_rate) * len(self.test_idx)):]]
+
+        self.cond_train_counter = 0
+        self.cond_validation_counter = 0
+        self.cond_test_counter = 0
+
+        self.cond_train_count = len(self.cond_train_idx)
+        self.cond_validation_count = len(self.cond_validation_idx)
+        self.cond_test_count = len(self.cond_test_idx)
+
+        pass
+
+    def next_cond_train_batch(self, batch_size=None):
+        out = self._next_batch(counter=self.cond_train_counter, count=self.cond_train_count,
+                               idx=self.cond_train_idx, batch_size=batch_size)
+        self.cond_train_counter = out[0]
+        return out[1:]
+
+    def next_cond_validation_batch(self, batch_size=None):
+        out = self._next_batch(counter=self.cond_validation_counter, count=self.cond_validation_count,
+                               idx=self.cond_validation_idx, batch_size=batch_size)
+        self.cond_validation_counter = out[0]
+        return out[1:]
+
+    def next_cond_test_batch(self, batch_size=None):
+        out = self._next_batch(counter=self.test_counter, count=self.test_count,
+                               idx=self.test_idx, batch_size=batch_size)
+        self.cond_test_counter = out[0]
+        return out[1:]
