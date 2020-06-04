@@ -22,11 +22,6 @@ N_SAMPLES = 5000
 EPOCHS = 1
 SAVE_EVERY = None
 
-data = SparseMolecularDataset()
-data.load('data/gdb9_9nodes.sparsedataset')
-
-steps = (len(data) // BATCH_DIM)
-
 
 def train_fetch_dict(i, steps, epoch, epochs, min_epochs, model, optimizer):
     la = 1 if epoch < epochs / 2 else LA
@@ -175,8 +170,13 @@ if __name__ == '__main__':
 
     for i in range(args.replicas):
 
-        tf.reset_default_graph()
-        
+        tf.reset_default_graph()  # rebuild comp. graph across replicas
+
+        data = SparseMolecularDataset()
+        data.load('data/gdb9_9nodes.sparsedataset')
+
+        steps = (len(data) // BATCH_DIM)
+
         save_dir = args.name + ('_%02d' % i if args.replicas > 1 else '')
         import os
         if not os.path.exists(save_dir):
@@ -213,6 +213,6 @@ if __name__ == '__main__':
 
         session.close()
 
-        del model, optimizer, trainer
+        del model, optimizer, trainer, data
 
 
