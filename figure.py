@@ -6,7 +6,7 @@ NAME = 'buggy095'
 META_DIR = 'results/'
 DIRECTORIES = ['molgan_095_buggy',
                'molganb_095_buggy',
-               'pacstats_clip_elastic_095_buggy', ]
+               'pacstats_clip_elastic_095_buggy']
 DIRECTORIES = [META_DIR + d for d in DIRECTORIES]
 COLORS = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
 
@@ -29,9 +29,9 @@ for _d, _c in zip(DIRECTORIES, COLORS[:len(DIRECTORIES)]):
             _rec = json.load(fh)
         __rec = []
         for r in _rec:
-            if r['loss D'] != r['loss D']:
+            if r['loss D'] is np.nan or r['loss D'] == 0.0:
                 for k in r:
-                    r[k] = r['loss D']
+                    r[k] = float(np.nan)
             __rec.append(r)
         recs.append(_rec)
 
