@@ -110,3 +110,4 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+/data/gdb9_9nodes.rewarddataset
