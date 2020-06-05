@@ -2,13 +2,17 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-NAME = 'buggy095'
+NAME = 'bugfree_095'
 META_DIR = 'results/'
-DIRECTORIES = ['molgan_095_buggy',
-               'molganb_095_buggy',
+DIRECTORIES = ['molgan',
+               'molgan_095_buggy',
                'pacstats_clip_elastic_095_buggy']
+               #'molbatch',
+               #'pac_elas_1',
+               #'pac_elas_2',
+               #'pac_merge']
 DIRECTORIES = [META_DIR + d for d in DIRECTORIES]
-COLORS = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
+COLORS = ['r', 'b', 'g', 'c', 'm', 'y', 'k']
 
 INTERESTS = ["loss D", "loss G", "loss V", "loss RL", "QED score",
              "diversity score", "drugcandidate score", "valid score", "unique score", "novel score"]
@@ -16,7 +20,7 @@ INTERESTS = ["loss D", "loss G", "loss V", "loss RL", "QED score",
 PLT_LAYOUT = (2, 5)
 INDEX = [(0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (1, 0), (1, 1), (1, 2), (1, 3), (1, 4)]
 
-fig, ax = plt.subplots(*PLT_LAYOUT, figsize=(18, 12))
+fig, ax = plt.subplots(*PLT_LAYOUT, figsize=(18, 12), dpi=100)
 
 
 for _d, _c in zip(DIRECTORIES, COLORS[:len(DIRECTORIES)]):
