@@ -146,6 +146,7 @@ def Argparser():
                         help='name of the experiment.')
     parser.add_argument('-m', '--model', type=str, help='model name.')
     parser.add_argument('-r', '--replicas', type=int, default=1, help='model name.')
+    parser.add_argument('--lam', type=float, default=0.05, help='lambda')
     return parser
 
 
@@ -165,6 +166,8 @@ MODELS = {  # Model, Discr, use_batch_discr, n_critics
 if __name__ == '__main__':
     parser = Argparser()
     args = parser.parse_args()
+
+    LA = args.lam
 
     Model, Discr, batch_discr, N_CRITIC = MODELS[args.model]
 
