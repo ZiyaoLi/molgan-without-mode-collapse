@@ -46,3 +46,7 @@ should contain your datasets.
 Please refer to the example [`train.sh`](https://github.com/ZiyaoLi/molgan-without-mode-collapse/tree/master/train.sh).
 
 Use `python molgan_train.py --help` or `python conditional_train.py --help` to check the arguments.
+
+## Notes
+VAE models are directly forked from MolGAN and left untested.
+
