@@ -22,47 +22,27 @@ We also implemented other batch-discriminator tricks and a (Relational) Graph At
 * **matplotlib**
 
 ## Structure
-* [data](https://github.com/nicola-decao/MolGAN/tree/master/data): 
+* [`data`](https://github.com/ZiyaoLi/molgan-without-mode-collapse/tree/master/data): 
 should contain your datasets. 
     
     Run `download_dataset.sh` to download QM9 dataset (used for the paper). 
-If you wish to use this data, run `generate_dataset.py` to generate the required format of data. 
-(Change the `size` argument in `data.generate` for subset of data.) 
+    
+    Run `generate_dataset.py` to generate the required format of data after download. 
+    (Data in `.sdf` or `.smi` format from other resources can also be transformed using this script.)
+
+    Change the `size` argument in `data.generate` for subset of data.
 
     `SparseMolecularDataset` generates required data in official MolGAN, 
-whereas `SparseMolecularDatasetWithRewards` generates data required in our conditional training scheme.
-* [molgan_train](https://github.com/nicola-decao/MolGAN/blob/master/molgan_train.py): Original training scheme in MolGAN.
-* [conditional_train](https://github.com/nicola-decao/MolGAN/blob/master/conditional_train.py): Conditional training scheme proposed in this repo.
-* [models](https://github.com/nicola-decao/MolGAN/tree/master/models): Class for Models. Both VAE and (W)GAN are implemented.
-* [optimizers](https://github.com/nicola-decao/MolGAN/tree/master/optimizers): Class for Optimizers for both VAE, (W)GAN and RL.
+
+    `SparseMolecularDatasetWithRewards` generates data required in our conditional training scheme.
+
+* [`molgan_train.py`](https://github.com/ZiyaoLi/molgan-without-mode-collapse/tree/master/molgan_train.py): Original training scheme in MolGAN.
+* [`conditional_train.py`](https://github.com/ZiyaoLi/molgan-without-mode-collapse/tree/master/conditional_train.py): Conditional training scheme proposed in this repo.
+* [`models`](https://github.com/ZiyaoLi/molgan-without-mode-collapse/tree/master/models): Class for Models. Both VAE and (W)GAN are implemented.
+* [`optimizers`](https://github.com/ZiyaoLi/molgan-without-mode-collapse/tree/master/optimizers): Class for Optimizers for both VAE, (W)GAN and RL.
+* [`utils`](https://github.com/ZiyaoLi/molgan-without-mode-collapse/tree/master/utils): Utils including model layers, datasets, molecular metrics, reward functions, et al.
 
 ## Usage
-Please have a look at the [example](https://github.com/nicola-decao/MolGAN/blob/master/example.py).
+Please refer to the example [`train.sh`](https://github.com/ZiyaoLi/molgan-without-mode-collapse/tree/master/train.sh).
 
-Please cite [[1](#citation)] in your work when using this library in your experiments.
-
-## Feedback
-For questions and comments, feel free to contact [Nicola De Cao](mailto:nicola.decao@gmail.com).
-
-## License
-MIT
-
-## Citation
-```
-[1] De Cao, N., and Kipf, T. (2018).MolGAN: An implicit generative 
-model for small molecular graphs. ICML 2018 workshop on Theoretical
-Foundations and Applications of Deep Generative Models.
-```
-
-BibTeX format:
-```
-@article{de2018molgan,
-  title={{MolGAN: An implicit generative model for small
-  molecular graphs}},
-  author={De Cao, Nicola and Kipf, Thomas},
-  journal={ICML 2018 workshop on Theoretical Foundations 
-  and Applications of Deep Generative Models},
-  year={2018}
-}
-
-```
+Use `python molgan_train.py --help` or `python conditional_train.py --help` to check the arguments.
