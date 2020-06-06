@@ -344,7 +344,8 @@ class SparseMolecularDatasetWithRewards(SparseMolecularDataset):
         if metric != self.metric:  # a new metric required.
             self.metric = metric
             self._genReward(metric)
-            self._generate_conditional_train_validation_test(conditional_rate)
+
+        self._generate_conditional_train_validation_test(conditional_rate)
 
         if proportion < 1:
             self.cond_train_idx = np.random.choice(
