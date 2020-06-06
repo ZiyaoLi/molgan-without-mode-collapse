@@ -1,0 +1,5 @@
+python>=3.6
+tensorflow==1.15
+rdkit
+scikit-learn
+matplotlib

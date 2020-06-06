@@ -1,8 +1,17 @@
-# MolGAN
-Tensorflow implementation of MolGAN: An implicit generative model for small molecular graphs (https://arxiv.org/abs/1805.11973)
+# MolGAN without Mode Collapse
+Resolving Mode Collapse in [MolGAN](https://github.com/nicola-decao/MolGAN/tree/master), a Tensorflow implementation. 
+See MolGAN in [reference](https://arxiv.org/abs/1805.11973).
 
 ## Overview
-This library contains a Tensorflow implementation of MolGAN: An implicit generative model for small molecular graphs as presented in [[1]](#citation)(https://arxiv.org/abs/1805.11973).
+
+MolGAN is a Generative Adversarial Network on graph-represented molecular data. See the paper for more information: 
+[MolGAN: An implicit generative model for small molecular graphs](https://arxiv.org/abs/1805.11973)
+
+In this repo we resolved the mode collapse reported in the original paper.
+Specifically, we established a *conditional trainer* to feed data with higher rewards in the second training phase of MolGAN.
+
+We also implemented other batch-discriminator tricks and a (Relational) Graph Attention Network discriminator.
+
 ## Dependencies
 
 * **python>=3.6**
@@ -10,10 +19,20 @@ This library contains a Tensorflow implementation of MolGAN: An implicit generat
 * **rdkit**: https://www.rdkit.org
 * **numpy**
 * **scikit-learn**
+* **matplotlib**
 
 ## Structure
-* [data](https://github.com/nicola-decao/MolGAN/tree/master/data): should contain your datasets. If you run `download_dataset.sh` the script will download the dataset used for the paper (then you should run `utils/sparse_molecular_dataset.py` to convert the dataset in a graph format used by MolGAN models).
-* [example](https://github.com/nicola-decao/MolGAN/blob/master/example.py): Example code for using the library within a Tensorflow project. **NOTE: these are NOT the experiments on the paper!**
+* [data](https://github.com/nicola-decao/MolGAN/tree/master/data): 
+should contain your datasets. 
+    
+    Run `download_dataset.sh` to download QM9 dataset (used for the paper). 
+If you wish to use this data, run `generate_dataset.py` to generate the required format of data. 
+(Change the `size` argument in `data.generate` for subset of data.) 
+
+    `SparseMolecularDataset` generates required data in official MolGAN, 
+whereas `SparseMolecularDatasetWithRewards` generates data required in our conditional training scheme.
+* [molgan_train](https://github.com/nicola-decao/MolGAN/blob/master/molgan_train.py): Original training scheme in MolGAN.
+* [conditional_train](https://github.com/nicola-decao/MolGAN/blob/master/conditional_train.py): Conditional training scheme proposed in this repo.
 * [models](https://github.com/nicola-decao/MolGAN/tree/master/models): Class for Models. Both VAE and (W)GAN are implemented.
 * [optimizers](https://github.com/nicola-decao/MolGAN/tree/master/optimizers): Class for Optimizers for both VAE, (W)GAN and RL.
 
