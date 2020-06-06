@@ -10,7 +10,7 @@ MolGAN is a Generative Adversarial Network on graph-represented molecular data. 
 In this repo we resolved the mode collapse reported in the original paper.
 Specifically, we established a *conditional trainer* to feed data with higher rewards in the second training phase of MolGAN.
 
-We also implemented other batch-discriminator tricks and a (Relational) Graph Attention Network discriminator.
+We also implemented other batch-discriminator models and a (Relational) Graph Attention Network discriminator.
 
 ## Dependencies
 
@@ -48,5 +48,4 @@ Please refer to the example [`train.sh`](https://github.com/ZiyaoLi/molgan-witho
 Use `python molgan_train.py --help` or `python conditional_train.py --help` to check the arguments.
 
 ## Notes
-VAE models are directly forked from MolGAN and left untested.
-
+VAE models remain unaltered ([MolGAN](https://github.com/nicola-decao/MolGAN/tree/master)) and untested.

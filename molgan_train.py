@@ -145,7 +145,7 @@ def Argparser():
     parser.add_argument("-n", "--name", type=str, required=True,
                         help='name of the experiment.')
     parser.add_argument('-m', '--model', type=str, help='model name.')
-    parser.add_argument('-r', '--replicas', type=int, default=1, help='model name.')
+    parser.add_argument('-r', '--replicas', type=int, default=1, help='number of replicas of training.')
     parser.add_argument('--lam', type=float, default=0.05, help='lambda')
     return parser
 
