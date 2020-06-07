@@ -409,8 +409,6 @@ class SparseMolecularDatasetWithRewards(SparseMolecularDataset):
         self.cond_validation_count = len(self.cond_validation_idx)
         self.cond_test_count = len(self.cond_test_idx)
 
-        pass
-
     def next_cond_train_batch(self, batch_size=None):
         out = self._next_batch(counter=self.cond_train_counter, count=self.cond_train_count,
                                idx=self.cond_train_idx, batch_size=batch_size)
@@ -424,7 +422,7 @@ class SparseMolecularDatasetWithRewards(SparseMolecularDataset):
         return out[1:]
 
     def next_cond_test_batch(self, batch_size=None):
-        out = self._next_batch(counter=self.test_counter, count=self.test_count,
-                               idx=self.test_idx, batch_size=batch_size)
+        out = self._next_batch(counter=self.cond_test_counter, count=self.cond_test_count,
+                               idx=self.cond_test_idx, batch_size=batch_size)
         self.cond_test_counter = out[0]
         return out[1:]

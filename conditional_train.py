@@ -24,9 +24,8 @@ SAVE_EVERY = None
 
 
 def train_fetch_dict(i, steps, epoch, epochs, min_epochs, model, optimizer):
-    la = 1 if epoch < epochs / 2 else LA
     gan_ops = [optimizer.train_step_G] if i % N_CRITIC == 0 else [optimizer.train_step_D]
-    rwd_ops = [optimizer.train_step_V] if i % N_CRITIC == 0 and LA < 1 and la == 1 else []
+    rwd_ops = [optimizer.train_step_V] if i % N_CRITIC == 0 and LA < 1 else []
     return gan_ops + rwd_ops
 
 
@@ -58,7 +57,7 @@ def train_feed_dict(i, steps, epoch, epochs, min_epochs, model, optimizer, batch
                      model.rewardF: rewardF,
                      model.training: True,
                      model.dropout_rate: DROPOUT,
-                     optimizer.la: la if epoch > 0 else 1.0}
+                     optimizer.la: la}
 
     else:
         feed_dict = {model.edges_labels: a,
@@ -81,16 +80,15 @@ def eval_feed_dict(i, epochs, min_epochs, model, optimizer, batch_dim):
     stage = 0 if i < epochs / 2 else 1
 
     if stage == 0:
-        molsR, _, _, a, x, _, _, _, _ = data.next_train_batch(batch_dim)
+        molsR, _, _, a, x, _, _, _, _ = data.next_validation_batch(batch_dim)
     else:
-        molsR, _, _, a, x, _, _, _, _ = data.next_cond_train_batch(batch_dim)
+        molsR, _, _, a, x, _, _, _, _ = data.next_cond_validation_batch(batch_dim)
 
-    embeddings = model.sample_z(a.shape[0])
+    z_embeds = model.sample_z(a.shape[0])
 
     rewardR = reward(molsR, METRIC, data)
-
     n, e = session.run([model.nodes_gumbel_argmax, model.edges_gumbel_argmax],
-                       feed_dict={model.training: False, model.embeddings: embeddings})
+                       feed_dict={model.training: False, model.embeddings: z_embeds})
     n, e = np.argmax(n, axis=-1), np.argmax(e, axis=-1)
     molsF = [data.matrices2mol(n_, e_, strict=True) for n_, e_ in zip(n, e)]
 
@@ -100,7 +98,7 @@ def eval_feed_dict(i, epochs, min_epochs, model, optimizer, batch_dim):
 
     feed_dict = {model.edges_labels: a,
                  model.nodes_labels: x,
-                 model.embeddings: embeddings,
+                 model.embeddings: z_embeds,
                  model.rewardR: rewardR,
                  model.rewardF: rewardF,
                  model.training: False}
@@ -116,8 +114,36 @@ def _eval_update(i, epochs, min_epochs, model, optimizer, batch_dim, eval_batch)
 
 
 test_fetch_dict = eval_fetch_dict
-test_feed_dict = eval_feed_dict
 _test_update = _eval_update
+
+
+def test_feed_dict(i, epochs, min_epochs, model, optimizer, batch_dim):
+    stage = 0 if i < epochs / 2 else 1
+
+    if stage == 0:
+        molsR, _, _, a, x, _, _, _, _ = data.next_test_batch(batch_dim)
+    else:
+        molsR, _, _, a, x, _, _, _, _ = data.next_cond_test_batch(batch_dim)
+
+    z_embeds = model.sample_z(a.shape[0])
+
+    rewardR = reward(molsR, METRIC, data)
+    n, e = session.run([model.nodes_gumbel_argmax, model.edges_gumbel_argmax],
+                       feed_dict={model.training: False, model.embeddings: z_embeds})
+    n, e = np.argmax(n, axis=-1), np.argmax(e, axis=-1)
+    molsF = [data.matrices2mol(n_, e_, strict=True) for n_, e_ in zip(n, e)]
+
+    record_mols_and_smiles(molsF, i)
+
+    rewardF = reward(molsR, METRIC, data)
+
+    feed_dict = {model.edges_labels: a,
+                 model.nodes_labels: x,
+                 model.embeddings: z_embeds,
+                 model.rewardR: rewardR,
+                 model.rewardF: rewardF,
+                 model.training: False}
+    return feed_dict
 
 
 def record_mols_and_smiles(mols, epoch, draw=True):
@@ -188,7 +214,7 @@ if __name__ == '__main__':
         tf.reset_default_graph()  # rebuild comp. graph across replicas
 
         data = SparseMolecularDatasetWithRewards()
-        data.load('data/gdb9_9nodes.rewarddataset')
+        data.load('data/gdb9_9nodes.rewarddataset', conditional_rate=1)
 
         steps = (len(data) // BATCH_DIM)
 
