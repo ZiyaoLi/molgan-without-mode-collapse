@@ -181,8 +181,8 @@ def Argparser():
     parser.add_argument('-m', '--model', type=str, help='model name.')
     parser.add_argument('-r', '--replicas', type=int, default=1, help='number of replicas of training.')
     parser.add_argument('--lam', type=float, default=0.05, help='lambda')
-    parser.add_argument('--cond_rate', type=float, default=0.30, help='top r proportion of nodes w.r.t. rewards'
-                                                                      'used in conditional training.')
+    # parser.add_argument('--cond_rate', type=float, default=0.30, help='top r proportion of nodes w.r.t. rewards'
+    #                                                                   'used in conditional training.')
     return parser
 
 
