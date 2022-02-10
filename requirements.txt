@@ -1,5 +1,5 @@
 python>=3.6
-tensorflow==1.15
+tensorflow==2.5.3
 rdkit
 scikit-learn
 matplotlib
